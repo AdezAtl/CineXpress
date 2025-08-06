@@ -658,4 +658,158 @@ function updateProgress() {
 function updateProgress(percent) {
   const progressBar = document.querySelector('.progress-bar');
   progressBar.setAttribute('aria-valuenow', percent);
-  document.ge
+  document.getElementById('loadingMessage').textContent = 
+    `Loading CineXpress... ${percent}%`;
+}
+
+function hideLoadingScreen() {
+  document.getElementById('loadSound').play();
+  // ... rest of the function
+}
+
+// Global variable to track loading state
+let isLoading = true;
+
+async function hideLoadingScreen() {
+  const loadingScreen = document.getElementById('loadingScreen');
+  if (!loadingScreen) return;
+  
+  loadingScreen.style.opacity = '0';
+  loadingScreen.style.pointerEvents = 'none';
+  
+  // Wait for fade-out animation to complete
+  await new Promise(resolve => setTimeout(resolve, 500));
+  
+  loadingScreen.style.display = 'none';
+  isLoading = false;
+}
+
+async function showLoadingScreen() {
+  if (isLoading) return;
+  isLoading = true;
+  
+  const loadingScreen = document.getElementById('loadingScreen');
+  loadingScreen.style.display = 'flex';
+  loadingScreen.style.opacity = '1';
+  loadingScreen.style.pointerEvents = 'auto';
+  
+  // Reset progress bar
+  document.querySelector('.progress').style.width = '0%';
+}
+
+// Modified fetch function
+async function fetchPopularMovies() {
+  showLoadingScreen();
+  
+  try {
+    const response = await fetch(`${BASE_URL}/movie/popular?api_key=${API_KEY}`);
+    if (!response.ok) throw new Error('Network response was not ok');
+    
+    const data = await response.json();
+    displayMovies(data.results);
+    updateProgress(50); // Example progress update
+    
+  } catch (error) {
+    console.error("Fetch error:", error);
+    document.getElementById('loadingMessage').textContent = "Error loading movies";
+    await new Promise(resolve => setTimeout(resolve, 2000));
+  } finally {
+    await hideLoadingScreen();
+  }
+}
+
+// Call this when all critical assets are loaded
+function initApp() {
+  window.addEventListener('load', async () => {
+    // Artificial delay for demo (remove in production)
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    await hideLoadingScreen();
+  });
+}
+
+initApp();
+
+// Sound Control System
+let soundEnabled = false;
+const audioElement = document.getElementById('loadSound');
+const soundIcon = document.getElementById('soundIcon');
+
+// Initialize audio (must be triggered by user)
+function initAudio() {
+  // This empty play/pause cycle unlocks audio on iOS
+  audioElement.volume = 0.5;
+  audioElement.play().then(() => {
+    audioElement.pause();
+    audioElement.currentTime = 0;
+  }).catch(e => console.log("Audio init:", e));
+}
+
+// Toggle sound
+document.getElementById('soundToggle').addEventListener('click', () => {
+  soundEnabled = !soundEnabled;
+  
+  if (soundEnabled) {
+    soundIcon.textContent = "🔊";
+    document.querySelector('#soundToggle span').textContent = "Sound On";
+    initAudio();
+  } else {
+    soundIcon.textContent = "🔇";
+    document.querySelector('#soundToggle span').textContent = "Sound Off";
+    audioElement.pause();
+  }
+});
+
+// Safe play function
+function playLoadSound() {
+  if (!soundEnabled) return;
+  
+  audioElement.currentTime = 0; // Rewind
+  audioElement.play().catch(e => {
+    console.log("Sound play blocked:", e);
+    // Auto-disable sound if blocked
+    soundEnabled = false;
+    soundIcon.textContent = "🔇";
+  });
+}
+
+document.getElementById('forceHide')?.addEventListener('click', () => {
+  console.warn("Force-hiding loading screen");
+  const loadingScreen = document.getElementById('loadingScreen');
+  loadingScreen.style.transition = 'none';
+  loadingScreen.style.display = 'none';
+  isLoading = false;
+});
+
+const searchInput = document.getElementById('searchInput');
+const searchResults = document.getElementById('searchResults');
+
+searchInput.addEventListener('input', async () => {
+  const query = searchInput.value.trim();
+
+  if (query.length === 0) {
+    searchResults.innerHTML = '';
+    return;
+  }
+
+  try {
+    const res = await fetch(`${BASE_URL}/search/multi?api_key=${API_KEY}&query=${query}`);
+    const data = await res.json();
+
+    const results = data.results.slice(0, 6); // limit results
+    searchResults.innerHTML = results
+      .map(item => {
+        const title = item.title || item.name || 'Untitled';
+        const id = item.id;
+        const type = item.media_type === 'tv' ? 'tv' : 'movie';
+        return `<li onclick="location.href='${type}.html?id=${id}'">${title}</li>`;
+      })
+      .join('');
+  } catch (err) {
+    console.error('Error fetching search results:', err);
+    searchResults.innerHTML = '';
+  }
+});
+
+</script>
+</html>
+
