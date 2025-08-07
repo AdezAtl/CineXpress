@@ -153,9 +153,13 @@
       // Initialize page
       if (window.location.pathname.includes('details.html')) {
         const urlParams = new URLSearchParams(window.location.search);
-        const movieId = urlParams.get('id');
-        if (movieId) showMovieDetails(movieId);
-      }
+const movieId = urlParams.get('id');
+
+if (!movieId || movieId === 'undefined') {
+  console.error("Invalid movie ID");
+  document.getElementById('movieDetails').innerHTML = "<p>Error: Invalid movie ID.</p>";
+  return;
+}
     });
 
     // Function to show movie details
