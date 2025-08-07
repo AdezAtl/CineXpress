@@ -149,15 +149,23 @@ async function fetchPopularMovies() {
 
 function displayMovies(movies) {
   const movieGrid = document.getElementById('popularMovies');
-  movieGrid.innerHTML = movies.map(movie => `
-    <div class="movie-card" onclick="window.location.href='details.html?id=${movie.id}'">
-      <img src="https://image.tmdb.org/t/p/w500${movie.poster_path}" alt="${movie.title}">
-      <div class="movie-info">
-        <h3>${movie.title}</h3>
-        <span>⭐ ${movie.vote_average.toFixed(1)}</span>
-      </div>
-    </div>
-  `).join('');
+  if (!movieGrid) return;
+
+  movieGrid.innerHTML = movies
+    .filter(movie => movie.id && movie.poster_path) // only movies with valid IDs
+    .map(movie => {
+      const title = movie.title || 'Untitled';
+      const poster = `https://image.tmdb.org/t/p/w500${movie.poster_path}`;
+      return `
+        <div class="movie-card" onclick="location.href='details.html?id=${movie.id}'">
+          <img src="${poster}" alt="${title}">
+          <div class="movie-info">
+            <h3>${title}</h3>
+            <span>⭐ ${movie.vote_average?.toFixed(1) || 'N/A'}</span>
+          </div>
+        </div>
+      `;
+    }).join('');
 }
 
 function displayComingSoon(movies) {
