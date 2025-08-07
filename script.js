@@ -1,3 +1,7 @@
+const urlParams = new URLSearchParams(window.location.search);
+const movieId = urlParams.get('id');
+console.log("Movie ID in URL:", movieId);
+
 document.querySelector('.search-box button').addEventListener('click', () => {
   const query = document.querySelector('.search-box input').value;
 });
