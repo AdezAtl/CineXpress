@@ -46,7 +46,7 @@
 
 @media (max-width: 768px) {
 .actor-card {
-    max-width: 70px
+    min-width: 90px
 }
 }
 
@@ -154,14 +154,10 @@
       // Initialize page
       if (window.location.pathname.includes('details.html')) {
         const urlParams = new URLSearchParams(window.location.search);
-const movieId = urlParams.get('id');
-
-if (!movieId || movieId === 'undefined') {
-  console.error("Invalid movie ID");
-  document.getElementById('movieDetails').innerHTML = "<p>Error: Invalid movie ID.</p>";
-  return;
-}
-    };
+        const movieId = urlParams.get('id');
+        if (movieId) showMovieDetails(movieId);
+      }
+    });
 
     // Function to show movie details
     async function showMovieDetails(movieId) {
@@ -319,5 +315,5 @@ if (!movieId || movieId === 'undefined') {
         console.error("Watchlist error:", error);
       }
     }
-</script>
+  </script>
 </html>
