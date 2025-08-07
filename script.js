@@ -61,7 +61,7 @@ async function displayHeroSlider() {
         <p>${movie.overview.substring(0, 150)}...</p>
         <div class="hero-buttons">
           <button class="play-btn">▶ Play</button>
-          <button class="info-btn">ℹ️ More Info</button>
+          <button class="info-btn" onclick="window.location.href='details.html?id=${movie.id}'">ℹ️ More Info</button>
         </div>
       </div>
     </div>
@@ -87,7 +87,7 @@ async function displayHeroSlider() {
   let slideInterval = setInterval(() => {
     currentSlide = (currentSlide + 1) % slides.length;
     updateSlider();
-  }, 5000);
+  }, 3500);
 
   // Next/Prev Controls
   document.querySelector('.slider-next').addEventListener('click', () => {
@@ -150,7 +150,7 @@ async function fetchPopularMovies() {
 function displayMovies(movies) {
   const movieGrid = document.getElementById('popularMovies');
   movieGrid.innerHTML = movies.map(movie => `
-    <div class="movie-card" onclick="window.location.href='movie.html?id=${movie.id}'">
+    <div class="movie-card" onclick="window.location.href='details.html?id=${movie.id}'">
       <img src="https://image.tmdb.org/t/p/w500${movie.poster_path}" alt="${movie.title}">
       <div class="movie-info">
         <h3>${movie.title}</h3>
@@ -159,6 +159,66 @@ function displayMovies(movies) {
     </div>
   `).join('');
 }
+
+function displayComingSoon(movies) {
+  const container = document.querySelector('.upcoming-grid');
+  container.innerHTML = movies.map(movie => `
+    <div class="upcoming-card" data-id="${movie.id}" onclick="window.location.href='details.html?id=${movie.id}'">
+      <img src="https://image.tmdb.org/t/p/w300${movie.poster_path}" 
+           alt="${movie.title}">
+      <div class="upcoming-info">
+        <h3>${movie.title}</h3>
+        <p>${new Date(movie.release_date).toLocaleDateString()}</p>
+      </div>
+    </div>
+  `).join('');
+}
+
+function displayTrendingMovies(movies) {
+  const container = document.querySelector('.trending-carousel');
+  container.innerHTML = movies.map(movie => `
+    <div class="trending-item" data-id="${movie.id}" onclick="window.location.href='details.html?id=${movie.id}'">
+      <img src="https://image.tmdb.org/t/p/w300${movie.poster_path}" 
+           alt="${movie.title}">
+      <div class="trending-badge">Trending</div>
+    </div>
+  `).join('');
+}
+
+// Add touch feedback
+document.querySelectorAll('.movie-card, .trending-item, .upcoming-card').forEach(card => {
+  card.addEventListener('touchstart', () => {
+    card.style.transform = 'scale(0.98)';
+  });
+  
+  card.addEventListener('touchend', () => {
+    card.style.transform = '';
+  });
+});
+
+// In your display functions (for all sections)
+function createMovieCard(movie) {
+  return `
+    <div class="movie-card" data-id="${movie.id}" onclick="window.location.href='details.html?id=${movie.id}'">
+      <img src="https://image.tmdb.org/t/p/w500${movie.poster_path}" 
+           alt="${movie.title}"
+           loading="lazy">
+      <div class="movie-info">
+        <h3>${movie.title}</h3>
+        <span>⭐ ${movie.vote_average.toFixed(1)}</span>
+      </div>
+    </div>
+  `;
+}
+
+// Universal click handler for all movie cards
+document.addEventListener('click', (e) => {
+  const card = e.target.closest('.movie-card');
+  if (card) {
+    const movieId = card.dataset.id;
+    window.location.href = `details.html?id=${movieId}`;
+  }
+});
 
 
 window.onload = fetchPopularMovies;
@@ -236,7 +296,7 @@ async function displayTrendingMovies() {
   const container = document.getElementById('trendingMovies');
   
   container.innerHTML = movies.map(movie => `
-    <div class="trending-card">
+    <div class="trending-card" onclick="window.location.href='details.html?id=${movie.id}'">
       <img src="https://image.tmdb.org/t/p/w500${movie.poster_path}" alt="${movie.title}">
       <div class="trending-overlay">
         <h4>${movie.title}</h4>
@@ -259,7 +319,7 @@ async function displayComingSoonMovies() {
   const container = document.getElementById('comingSoonMovies');
   
   container.innerHTML = movies.slice(0, 12).map(movie => `
-    <div class="coming-soon-card">
+    <div class="coming-soon-card" onclick="window.location.href='details.html?id=${movie.id}'">
       <img src="https://image.tmdb.org/t/p/w300${movie.poster_path}" alt="${movie.title}">
       <div class="coming-soon-date">
         ${new Date(movie.release_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
@@ -342,95 +402,252 @@ function toggleGenre(genreId) {
   fetchMoviesByGenre(selectedGenres.join(','));
 }
 
-// Function to show movie details
-async function showMovieDetails(movieId) {
-  // Fetch movie details
-  const movie = await fetch(`${BASE_URL}/movie/${movieId}?api_key=${API_KEY}&append_to_response=videos,credits`)
-    .then(res => res.json());
+// In your script.js
+const pageEmojis = {
+  '/': '🎬🍿',
+  '/watchlist': '📺✨',
+  '/movie': '🎞️🌟'
+};
 
-  // Fetch similar movies
-  const similar = await fetch(`${BASE_URL}/movie/${movieId}/similar?api_key=${API_KEY}`)
-    .then(res => res.json());
+function updateDocumentTitle() {
+  const path = window.location.pathname;
+  const emoji = pageEmojis[path] || '🎥';
+  document.title = `${emoji} CineXpress ${emoji}`;
+}
 
-  // Update URL (for sharing)
-  window.history.pushState({}, '', `movie.html?id=${movieId}`);
+// Call on route changes
+updateDocumentTitle();
 
-  // Render details
-  document.getElementById('movieDetails').innerHTML = `
-    <section class="movie-hero" style="background-image: url('https://image.tmdb.org/t/p/original${movie.backdrop_path}')">
-      <div class="hero-overlay"></div>
-      <div class="movie-poster">
-        <img src="https://image.tmdb.org/t/p/w500${movie.poster_path}" alt="${movie.title}">
-      </div>
-      <div class="movie-info">
-        <h1>${movie.title} <span>(${new Date(movie.release_date).getFullYear()})</span></h1>
-        
-        <div class="meta">
-          <span class="rating">⭐ ${movie.vote_average.toFixed(1)}</span>
-          <span>${movie.runtime} min</span>
-          <span>${movie.genres.map(g => g.name).join(', ')}</span>
-        </div>
-
-        <h3>Overview</h3>
-        <p>${movie.overview}</p>
-
-        <div class="cta-buttons">
-          <button class="watch-trailer" data-youtube-id="${movie.videos?.results[0]?.key}">
-            ▶ Play Trailer
-          </button>
-          <button class="add-favorites">+ My List</button>
-        </div>
-      </div>
-    </section>
-
-    <section class="cast-section">
-      <h2>Cast</h2>
-      <div class="cast-grid">
-        ${movie.credits.cast.slice(0, 10).map(actor => `
-          <div class="actor-card">
-            <img src="${actor.profile_path ? `https://image.tmdb.org/t/p/w200${actor.profile_path}` : 'placeholder-actor.jpg'}" alt="${actor.name}">
-            <h4>${actor.name}</h4>
-            <p>${actor.character}</p>
-          </div>
-        `).join('')}
-      </div>
-    </section>
-
-    <section class="similar-movies">
-      <h2>You May Also Like</h2>
-      <div class="movie-grid">
-        ${similar.results.slice(0, 5).map(movie => `
-          <div class="movie-card" onclick="showMovieDetails(${movie.id})">
-            <img src="https://image.tmdb.org/t/p/w300${movie.poster_path}" alt="${movie.title}">
-          </div>
-        `).join('')}
-      </div>
-    </section>
-  `;
-
-  // Add trailer modal functionality
-  document.querySelector('.watch-trailer')?.addEventListener('click', (e) => {
-    const youtubeId = e.target.dataset.youtubeId;
-    if (youtubeId) {
-      document.body.insertAdjacentHTML('beforeend', `
-        <div class="trailer-modal">
-          <div class="modal-content">
-            <iframe src="https://www.youtube.com/embed/${youtubeId}?autoplay=1" frameborder="0" allowfullscreen></iframe>
-            <button class="close-modal">×</button>
-          </div>
-        </div>
-      `);
+// Add to script.js
+function addEmojiReactions() {
+  document.querySelectorAll('.movie-card').forEach(card => {
+    card.addEventListener('mouseenter', () => {
+      const emojis = ['👍', '❤️', '🎬', '🍿', '😂', '👏'];
+      const emoji = document.createElement('div');
+      emoji.className = 'emoji-reaction';
+      emoji.textContent = emojis[Math.floor(Math.random() * emojis.length)];
+      emoji.style.left = `${Math.random() * 80 + 10}%`;
+      card.appendChild(emoji);
       
-      document.querySelector('.close-modal').addEventListener('click', () => {
-        document.querySelector('.trailer-modal').remove();
-      });
-    }
+      setTimeout(() => {
+        emoji.style.opacity = '0';
+        emoji.style.transform = 'translateY(-50px)';
+        setTimeout(() => emoji.remove(), 1000);
+      }, 300);
+    });
   });
 }
 
-// On page load (for details page)
-if (window.location.pathname.includes('movie.html')) {
-  const urlParams = new URLSearchParams(window.location.search);
-  const movieId = urlParams.get('id');
-  if (movieId) showMovieDetails(movieId);
+// Call after loading movies
+addEmojiReactions();
+
+// Show loading screen
+document.addEventListener('DOMContentLoaded', () => {
+  // Simulate loading (remove this in production)
+  setTimeout(() => {
+    hideLoadingScreen();
+  }, 3000); // Remove this timeout in production
+});
+
+// Real implementation - call this when everything is loaded
+function hideLoadingScreen() {
+  const loadingScreen = document.getElementById('loadingScreen');
+  loadingScreen.style.opacity = '0';
+  loadingScreen.style.pointerEvents = 'none';
+  setTimeout(() => {
+    loadingScreen.style.display = 'none';
+  }, 500);
 }
+
+// Call this when starting API requests
+function showLoadingScreen() {
+  document.getElementById('loadingScreen').style.display = 'flex';
+}
+
+async function fetchPopularMovies() {
+  showLoadingScreen(); // Show loader
+  
+  try {
+    const response = await fetch(`${BASE_URL}/movie/popular?api_key=${API_KEY}`);
+    const data = await response.json();
+    displayMovies(data.results);
+  } catch (error) {
+    console.error("Error fetching movies:", error);
+  } finally {
+    hideLoadingScreen(); // Hide when done
+  }
+}
+
+let loadedAssets = 0;
+const totalAssets = 10; // Set this to your actual asset count
+
+function updateProgress() {
+  loadedAssets++;
+  const progress = (loadedAssets / totalAssets) * 100;
+  document.querySelector('.progress').style.width = `${progress}%`;
+  
+  if (loadedAssets >= totalAssets) {
+    hideLoadingScreen();
+  }
+}
+
+// Call updateProgress() after loading:
+// - API responses
+// - Critical images
+// - Fonts
+// - Other assets
+
+function updateProgress(percent) {
+  const progressBar = document.querySelector('.progress-bar');
+  progressBar.setAttribute('aria-valuenow', percent);
+  document.getElementById('loadingMessage').textContent = 
+    `Loading CineXpress... ${percent}%`;
+}
+
+function hideLoadingScreen() {
+  document.getElementById('loadSound').play();
+  // ... rest of the function
+}
+
+// Global variable to track loading state
+let isLoading = true;
+
+async function hideLoadingScreen() {
+  const loadingScreen = document.getElementById('loadingScreen');
+  if (!loadingScreen) return;
+  
+  loadingScreen.style.opacity = '0';
+  loadingScreen.style.pointerEvents = 'none';
+  
+  // Wait for fade-out animation to complete
+  await new Promise(resolve => setTimeout(resolve, 500));
+  
+  loadingScreen.style.display = 'none';
+  isLoading = false;
+}
+
+async function showLoadingScreen() {
+  if (isLoading) return;
+  isLoading = true;
+  
+  const loadingScreen = document.getElementById('loadingScreen');
+  loadingScreen.style.display = 'flex';
+  loadingScreen.style.opacity = '1';
+  loadingScreen.style.pointerEvents = 'auto';
+  
+  // Reset progress bar
+  document.querySelector('.progress').style.width = '0%';
+}
+
+// Modified fetch function
+async function fetchPopularMovies() {
+  showLoadingScreen();
+  
+  try {
+    const response = await fetch(`${BASE_URL}/movie/popular?api_key=${API_KEY}`);
+    if (!response.ok) throw new Error('Network response was not ok');
+    
+    const data = await response.json();
+    displayMovies(data.results);
+    updateProgress(50); // Example progress update
+    
+  } catch (error) {
+    console.error("Fetch error:", error);
+    document.getElementById('loadingMessage').textContent = "Error loading movies";
+    await new Promise(resolve => setTimeout(resolve, 2000));
+  } finally {
+    await hideLoadingScreen();
+  }
+}
+
+// Call this when all critical assets are loaded
+function initApp() {
+  window.addEventListener('load', async () => {
+    // Artificial delay for demo (remove in production)
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    await hideLoadingScreen();
+  });
+}
+
+initApp();
+
+// Sound Control System
+let soundEnabled = false;
+const audioElement = document.getElementById('loadSound');
+const soundIcon = document.getElementById('soundIcon');
+
+// Initialize audio (must be triggered by user)
+function initAudio() {
+  // This empty play/pause cycle unlocks audio on iOS
+  audioElement.volume = 0.5;
+  audioElement.play().then(() => {
+    audioElement.pause();
+    audioElement.currentTime = 0;
+  }).catch(e => console.log("Audio init:", e));
+}
+
+// Toggle sound
+document.getElementById('soundToggle').addEventListener('click', () => {
+  soundEnabled = !soundEnabled;
+  
+  if (soundEnabled) {
+    soundIcon.textContent = "🔊";
+    document.querySelector('#soundToggle span').textContent = "Sound On";
+    initAudio();
+  } else {
+    soundIcon.textContent = "🔇";
+    document.querySelector('#soundToggle span').textContent = "Sound Off";
+    audioElement.pause();
+  }
+});
+
+// Safe play function
+function playLoadSound() {
+  if (!soundEnabled) return;
+  
+  audioElement.currentTime = 0; // Rewind
+  audioElement.play().catch(e => {
+    console.log("Sound play blocked:", e);
+    // Auto-disable sound if blocked
+    soundEnabled = false;
+    soundIcon.textContent = "🔇";
+  });
+}
+
+document.getElementById('forceHide')?.addEventListener('click', () => {
+  console.warn("Force-hiding loading screen");
+  const loadingScreen = document.getElementById('loadingScreen');
+  loadingScreen.style.transition = 'none';
+  loadingScreen.style.display = 'none';
+  isLoading = false;
+});
+
+const searchInput = document.getElementById('searchInput');
+const searchResults = document.getElementById('searchResults');
+
+searchInput.addEventListener('input', async () => {
+  const query = searchInput.value.trim();
+
+  if (query.length === 0) {
+    searchResults.innerHTML = '';
+    return;
+  }
+
+  try {
+    const res = await fetch(`${BASE_URL}/search/multi?api_key=${API_KEY}&query=${query}`);
+    const data = await res.json();
+
+    const results = data.results.slice(0, 6); // limit results
+    searchResults.innerHTML = results
+      .map(item => {
+        const title = item.title || item.name || 'Untitled';
+        const id = item.id;
+        const type = item.media_type === 'tv' ? 'tv' : 'movie';
+        return `<li onclick="location.href='${type}.html?id=${id}'">${title}</li>`;
+      })
+      .join('');
+  } catch (err) {
+    console.error('Error fetching search results:', err);
+    searchResults.innerHTML = '';
+  }
+});
