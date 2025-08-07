@@ -152,10 +152,12 @@ function displayMovies(movies) {
   if (!movieGrid) return;
 
   movieGrid.innerHTML = movies
-    .filter(movie => movie.id && movie.poster_path) // only movies with valid IDs
     .map(movie => {
+      console.log("Rendering movie:", movie);
       const title = movie.title || 'Untitled';
-      const poster = `https://image.tmdb.org/t/p/w500${movie.poster_path}`;
+      const poster = movie.poster_path
+        ? `https://image.tmdb.org/t/p/w500${movie.poster_path}`
+        : 'https://via.placeholder.com/500x750?text=No+Image';
       return `
         <div class="movie-card" onclick="location.href='details.html?id=${movie.id}'">
           <img src="${poster}" alt="${title}">
