@@ -110,210 +110,198 @@
   </main>
 </body>
   
-  <script>
-    const API_KEY = '38d01855c73113431d5d64e22d399ac4';
-    const BASE_URL = 'https://api.themoviedb.org/3';
+<script>
+  const API_KEY = '38d01855c73113431d5d64e22d399ac4'; // Move to backend for security
+const BASE_URL = 'https://api.themoviedb.org/3';
 
-    // Menu toggle functionality
-    document.addEventListener('DOMContentLoaded', function() {
-      const menuToggle = document.querySelector('.menu-toggle');
-      const navLinks = document.querySelector('.nav-links');
+document.addEventListener('DOMContentLoaded', function() {
+  const menuToggle = document.querySelector('.menu-toggle');
+  const navLinks = document.querySelector('.nav-links');
 
-      if (menuToggle && navLinks) {
-        menuToggle.addEventListener('click', function() {
-          navLinks.classList.toggle('active');
-          menuToggle.classList.toggle('active');
-          document.body.classList.toggle('no-scroll');
-        });
+  if (menuToggle && navLinks) {
+    menuToggle.addEventListener('click', function() {
+      navLinks.classList.toggle('active');
+      navLinks.classList.toggle('mobile-active');
+      menuToggle.classList.toggle('active');
+      document.body.classList.toggle('no-scroll');
+    });
 
-        document.querySelectorAll('.nav-links a').forEach(link => {
-          link.addEventListener('click', function() {
-            navLinks.classList.remove('active');
-            menuToggle.classList.remove('active');
-            document.body.classList.remove('no-scroll');
-          });
-        });
+    document.querySelectorAll('.nav-links a').forEach(link => {
+      link.addEventListener('click', function() {
+        navLinks.classList.remove('active');
+        menuToggle.classList.remove('active');
+        document.body.classList.remove('no-scroll');
+      });
+    });
 
-        document.addEventListener('click', function(e) {
-          if (!navLinks.contains(e.target) && !menuToggle.contains(e.target)) {
-            navLinks.classList.remove('active');
-            menuToggle.classList.remove('active');
-            document.body.classList.remove('no-scroll');
-          }
-        });
+    document.addEventListener('click', function(e) {
+      if (!navLinks.contains(e.target) && !menuToggle.contains(e.target)) {
+        navLinks.classList.remove('active');
+        menuToggle.classList.remove('active');
+        document.body.classList.remove('no-scroll');
       }
-      
-      menuToggle.addEventListener('click', function() {
-  navLinks.classList.toggle('mobile-active');
-  menuToggle.classList.toggle('active');
-  document.body.classList.toggle('no-scroll');
+    });
+  }
+
+  if (window.location.pathname.includes('details.html')) {
+    const urlParams = new URLSearchParams(window.location.search);
+    const movieId = urlParams.get('id');
+    if (movieId) showMovieDetails(movieId);
+  }
 });
 
-      
+async function showMovieDetails(movieId) {
+  const movieDetails = document.getElementById('movieDetails');
+  if (!movieDetails) {
+    console.error('Movie details container not found');
+    return;
+  }
 
-      // Initialize page
-      if (window.location.pathname.includes('details.html')) {
-        const urlParams = new URLSearchParams(window.location.search);
-        const movieId = urlParams.get('id');
-        if (movieId) showMovieDetails(movieId);
+  try {
+    const [movieResponse, similarResponse] = await Promise.all([
+      fetch(`${BASE_URL}/movie/${movieId}?api_key=${API_KEY}&append_to_response=videos,credits`),
+      fetch(`${BASE_URL}/movie/${movieId}/similar?api_key=${API_KEY}`)
+    ]);
+
+    if (!movieResponse.ok || !similarResponse.ok) {
+      throw new Error('Failed to fetch movie data');
+    }
+
+    const movie = await movieResponse.json();
+    const similar = await similarResponse.json();
+
+    movieDetails.innerHTML = `
+      <section class="movie-hero" style="background-image: url('https://image.tmdb.org/t/p/original${movie.backdrop_path || '/default-backdrop.jpg'}')">
+        <div class="hero-overlay"></div>
+        <div class="movie-poster">
+          <img src="${movie.poster_path ? `https://image.tmdb.org/t/p/w500${movie.poster_path}` : '/placeholder.jpg'}" 
+               alt="Poster for ${movie.title || 'Movie'}" 
+               loading="lazy">
+        </div>
+        <div class="movie-info">
+          <h1>${movie.title || 'Untitled'} <span>(${movie.release_date ? new Date(movie.release_date).getFullYear() : 'N/A'})</span></h1>
+          <div class="meta">
+            <span class="rating">⭐ ${movie.vote_average ? movie.vote_average.toFixed(1) : 'N/A'}</span>
+            <span>${movie.runtime || 'N/A'} min</span>
+            <span>${movie.genres && movie.genres.length > 0 ? movie.genres.map(g => g.name).join(', ') : 'N/A'}</span>
+          </div>
+          <h3>Overview</h3>
+          <p>${movie.overview || 'No overview available'}</p>
+          <div class="cta-buttons">
+            ${movie.videos?.results?.[0]?.key ? `
+              <button class="watch-trailer" data-youtube-id="${movie.videos.results[0].key}">
+                ▶ Play Trailer
+              </button>
+            ` : ''}
+            <button class="add-favorites" data-movie-id="${movie.id}">
+              + My List
+            </button>
+          </div>
+        </div>
+      </section>
+      <section class="cast-section">
+        <h2>Cast</h2>
+        <div class="cast-grid">
+          ${movie.credits?.cast?.length > 0 ? movie.credits.cast.slice(0, 10).map(actor => `
+            <div class="actor-card">
+              <img src="${actor.profile_path ? `https://image.tmdb.org/t/p/w200${actor.profile_path}` : '/placeholder-actor.jpg'}" 
+                   alt="Profile picture of ${actor.name || 'actor'}" 
+                   loading="lazy">
+              <h4>${actor.name || 'Unknown'}</h4>
+              <p>${actor.character || 'Unknown'}</p>
+            </div>
+          `).join('') : '<p>No cast information available</p>'}
+        </div>
+      </section>
+      <section class="similar-movies">
+        <h2>You May Also Like</h2>
+        <div class="movie-grid">
+          ${similar.results?.length > 0 ? similar.results.slice(0, 5).map(movie => `
+            <div class="movie-card" data-id="${movie.id}">
+              <img src="${movie.poster_path ? `https://image.tmdb.org/t/p/w300${movie.poster_path}` : '/placeholder.jpg'}" 
+                   alt="Poster for ${movie.title || 'Movie'}" 
+                   loading="lazy">
+            </div>
+          `).join('') : '<p>No similar movies found</p>'}
+        </div>
+      </section>
+    `;
+
+    document.querySelector('.watch-trailer')?.addEventListener('click', function(e) {
+      const youtubeId = e.target.dataset.youtubeId;
+      if (youtubeId && !document.querySelector('.trailer-modal')) {
+        document.body.insertAdjacentHTML('beforeend', `
+          <div class="trailer-modal">
+            <div class="modal-content">
+              <iframe src="https://www.youtube.com/embed/${youtubeId}?autoplay=1" 
+                      title="Trailer for ${movie.title || 'Movie'}" 
+                      frameborder="0" 
+                      allowfullscreen></iframe>
+              <button class="close-modal">×</button>
+            </div>
+          </div>
+        `);
+        document.querySelector('.close-modal').addEventListener('click', function() {
+          document.querySelector('.trailer-modal')?.remove();
+        });
       }
     });
 
-    // Function to show movie details
-    async function showMovieDetails(movieId) {
-      try {
-        const [movieResponse, similarResponse] = await Promise.all([
-          fetch(`${BASE_URL}/movie/${movieId}?api_key=${API_KEY}&append_to_response=videos,credits`),
-          fetch(`${BASE_URL}/movie/${movieId}/similar?api_key=${API_KEY}`)
-        ]);
+    document.querySelectorAll('.movie-card').forEach(card => {
+      card.addEventListener('click', function() {
+        const id = card.dataset.id;
+        if (id) window.location.href = `details.html?id=${id}`;
+      });
+    });
 
-        if (!movieResponse.ok || !similarResponse.ok) {
-          throw new Error('Failed to fetch movie data');
-        }
+    document.querySelector('.add-favorites')?.addEventListener('click', function() {
+      addToWatchlist(movie.id);
+    });
 
-        const movie = await movieResponse.json();
-        const similar = await similarResponse.json();
+  } catch (error) {
+    console.error("Error loading movie details:", error);
+    movieDetails.innerHTML = `
+      <div class="error-message">
+        <h2>Failed to load movie details</h2>
+        <p>${error.message}</p>
+        <button onclick="window.location.reload()">Retry</button>
+      </div>
+    `;
+  }
+}
 
-        // Render details
-        document.getElementById('movieDetails').innerHTML = `
-          <section class="movie-hero" style="background-image: url('https://image.tmdb.org/t/p/original${movie.backdrop_path || ''}')">
-            <div class="hero-overlay"></div>
-            <div class="movie-poster">
-              <img src="${movie.poster_path ? `https://image.tmdb.org/t/p/w500${movie.poster_path}` : 'placeholder.jpg'}" 
-                   alt="${movie.title || 'Movie poster'}" 
-                   loading="lazy">
-            </div>
-            <div class="movie-info">
-              <h1>${movie.title || 'Untitled'} <span>(${movie.release_date ? new Date(movie.release_date).getFullYear() : 'N/A'})</span></h1>
-              
-              <div class="meta">
-                <span class="rating">⭐ ${movie.vote_average ? movie.vote_average.toFixed(1) : 'N/A'}</span>
-                <span>${movie.runtime || 'N/A'} min</span>
-                <span>${movie.genres ? movie.genres.map(g => g.name).join(', ') : 'N/A'}</span>
-              </div>
-
-              <h3>Overview</h3>
-              <p>${movie.overview || 'No overview available'}</p>
-
-              <div class="cta-buttons">
-                ${movie.videos && movie.videos.results && movie.videos.results[0] && movie.videos.results[0].key ? `
-                  <button class="watch-trailer" data-youtube-id="${movie.videos.results[0].key}">
-                    ▶ Play Trailer
-                  </button>
-                ` : ''}
-                <button class="add-favorites" data-movie-id="${movie.id}">
-                  + My List
-                </button>
-              </div>
-            </div>
-          </section>
-
-          <section class="cast-section">
-            <h2>Cast</h2>
-            <div class="cast-grid">
-              ${movie.credits && movie.credits.cast ? movie.credits.cast.slice(0, 10).map(actor => `
-                <div class="actor-card">
-                  <img src="${actor.profile_path ? `https://image.tmdb.org/t/p/w200${actor.profile_path}` : 'placeholder-actor.jpg'}" 
-                       alt="${actor.name || 'Actor'}" 
-                       loading="lazy">
-                  <h4>${actor.name || 'Unknown'}</h4>
-                  <p>${actor.character || 'Unknown'}</p>
-                </div>
-              `).join('') : '<p>No cast information available</p>'}
-            </div>
-          </section>
-
-          <section class="similar-movies">
-            <h2>You May Also Like</h2>
-            <div class="movie-grid">
-              ${similar.results && similar.results.length > 0 ? similar.results.slice(0, 5).map(movie => `
-                <div class="movie-card" data-id="${movie.id}">
-                  <img src="${movie.poster_path ? `https://image.tmdb.org/t/p/w300${movie.poster_path}` : 'placeholder.jpg'}" 
-                       alt="${movie.title || 'Movie'}" 
-                       loading="lazy">
-                </div>
-              `).join('') : '<p>No similar movies found</p>'}
-            </div>
-          </section>
-        `;
-
-        // Add event listeners
-        document.querySelector('.watch-trailer')?.addEventListener('click', function(e) {
-          const youtubeId = e.target.dataset.youtubeId;
-          if (youtubeId) {
-            document.body.insertAdjacentHTML('beforeend', `
-              <div class="trailer-modal">
-                <div class="modal-content">
-                  <iframe src="https://www.youtube.com/embed/${youtubeId}?autoplay=1" 
-                          frameborder="0" 
-                          allowfullscreen></iframe>
-                  <button class="close-modal">×</button>
-                </div>
-              </div>
-            `);
-            
-            document.querySelector('.close-modal').addEventListener('click', function() {
-              document.querySelector('.trailer-modal').remove();
-            });
-          }
-        });
-
-        document.querySelectorAll('.movie-card').forEach(card => {
-          card.addEventListener('click', function() {
-            const id = card.dataset.id;
-            if (id) window.location.href = `index.html?id=${id}`;
-          });
-        });
-        
-
-        // Add to watchlist functionality
-        document.querySelector('.add-favorites')?.addEventListener('click', function() {
-          addToWatchlist(movie.id);
-        });
-
-      } catch (error) {
-        console.error("Error loading movie details:", error);
-        document.getElementById('movieDetails').innerHTML = `
-          <div class="error-message">
-            <h2>Failed to load movie details</h2>
-            <p>${error.message}</p>
-            <button onclick="window.location.reload()">Retry</button>
-          </div>
-        `;
+async function addToWatchlist(movieId) {
+  try {
+    const response = await fetch(`${BASE_URL}/movie/${movieId}?api_key=${API_KEY}`);
+    if (!response.ok) throw new Error('Failed to fetch movie');
+    
+    const movie = await response.json();
+    let watchlist = JSON.parse(localStorage.getItem('watchlist') || '[]');
+    
+    if (!watchlist.some(m => m.id === movie.id)) {
+      watchlist.push({
+        id: movie.id,
+        title: movie.title,
+        poster_path: movie.poster_path,
+        addedAt: new Date().toISOString()
+      });
+      localStorage.setItem('watchlist', JSON.stringify(watchlist));
+      
+      const btn = document.querySelector(`.add-favorites[data-movie-id="${movieId}"]`);
+      if (btn) {
+        btn.textContent = '✓ Added';
+        btn.style.backgroundColor = '#4CAF50';
+        setTimeout(() => {
+          btn.textContent = '+ My List';
+          btn.style.backgroundColor = '';
+        }, 2000);
       }
     }
+  } catch (error) {
+    console.error("Watchlist error:", error);
+    alert('Failed to add to watchlist. Please try again.');
+  }
+}
 
-    // Add to watchlist function
-    async function addToWatchlist(movieId) {
-      try {
-        const response = await fetch(`${BASE_URL}/movie/${movieId}?api_key=${API_KEY}`);
-        if (!response.ok) throw new Error('Failed to fetch movie');
-        
-        const movie = await response.json();
-        let watchlist = JSON.parse(localStorage.getItem('watchlist') || '[]');
-        
-        if (!watchlist.some(m => m.id === movie.id)) {
-          watchlist.push({
-            id: movie.id,
-            title: movie.title,
-            poster_path: movie.poster_path,
-            addedAt: new Date().toISOString()
-          });
-          localStorage.setItem('watchlist', JSON.stringify(watchlist));
-          
-          const btn = document.querySelector(`.add-favorites[data-movie-id="${movieId}"]`);
-          if (btn) {
-            btn.textContent = '✓ Added';
-            btn.style.backgroundColor = '#4CAF50';
-            setTimeout(() => {
-              btn.textContent = '+ My List';
-              btn.style.backgroundColor = '';
-            }, 2000);
-          }
-        }
-      } catch (error) {
-        console.error("Watchlist error:", error);
-      }
-    }
-  </script>
+</script>
 </html>
